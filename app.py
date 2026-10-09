@@ -19,8 +19,17 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "learning.db"))
 TEACHER_CODE = os.environ.get("TEACHER_CODE", "TEACH123")
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-AI_MODEL = os.environ.get("AI_MODEL", "claude-sonnet-5-5")
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")  # free tier available via Google AI Studio
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+if ANTHROPIC_KEY:
+    PROVIDER, API_KEY, DEFAULT_MODEL = "anthropic", ANTHROPIC_KEY, "claude-sonnet-5-5"
+elif GEMINI_KEY:
+    PROVIDER, API_KEY, DEFAULT_MODEL = "gemini", GEMINI_KEY, "gemini-3.8-flash"
+else:
+    PROVIDER, API_KEY, DEFAULT_MODEL = None, "", ""
+AI_ON = bool(API_KEY)
+AI_MODEL = os.environ.get("AI_MODEL") or DEFAULT_MODEL
 
 SYSTEM_PROMPT = (
     "You are a friendly AI study assistant for engineering students. Explain concepts clearly with short "
@@ -158,7 +167,7 @@ def logout():
 @app.route("/dashboard")
 @login_required("student")
 def dashboard():
-    return render_template("dashboard.html", name=session["name"], topics=TOPICS, ai_on=bool(API_KEY))
+    return render_template("dashboard.html", name=session["name"], topics=TOPICS, ai_on=AI_ON)
 
 
 @app.route("/teacher")
@@ -169,7 +178,17 @@ def teacher():
 
 # ---------- AI helpers ----------
 def call_ai(messages, max_tokens=700, system=SYSTEM_PROMPT):
-    """Call the Anthropic Messages API from the server (key never reaches the browser)."""
+    """Call the configured AI provider from the server (key never reaches the browser)."""
+    if PROVIDER == "gemini":
+        r = requests.post(
+            GEMINI_URL,
+            headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
+            json={"model": AI_MODEL, "max_tokens": max_tokens,
+                  "messages": [{"role": "system", "content": system}] + messages},
+            timeout=40,
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"] or ""
     r = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
@@ -205,7 +224,7 @@ def api_chat():
     ).fetchall()[::-1]
     mode = "offline"
     try:
-        if API_KEY:
+        if AI_ON:
             msgs = []
             for h in history:
                 msgs += [{"role": "user", "content": h["question"]}, {"role": "assistant", "content": h["answer"]}]
@@ -261,7 +280,7 @@ def api_quiz_generate():
     n = max(3, min(int(body.get("n", 5)), 5))
     source = "bank"
     questions = None
-    if API_KEY:
+    if AI_ON:
         try:
             questions, source = ai_quiz(topic, n), "ai"
         except Exception:
