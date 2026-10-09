@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teacher Dashboard</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body>
+<div class="topbar"><span class="brand">Teacher Dashboard</span>
+<span>{{ name }} &nbsp; <a href="{{ url_for('logout') }}">Log out</a></span></div>
+<div class="container">
+<div class="card"><h3>Topic performance (all students)</h3><div id="topics"></div></div>
+<div class="card"><h3>Students</h3>
+<table><thead><tr><th>Name</th><th>Email</th><th>Questions asked</th><th>Quizzes</th><th>Avg score</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+</div>
+<script>
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+fetch('/api/teacher/overview').then(r=>r.json()).then(d=>{
+  document.getElementById('topics').innerHTML = d.topics.length ? d.topics.map(t=>
+    `<p>${esc(t.topic)} <span class="muted">(${t.attempts} attempts)</span> - ${t.avg_pct}%</p><div class="bar"><div style="width:${t.avg_pct}%"></div></div>`).join('')
+    : '<p class="muted">No quiz data yet.</p>';
+  document.getElementById('rows').innerHTML = d.students.length ? d.students.map(s=>
+    `<tr><td>${esc(s.name)}</td><td>${esc(s.email)}</td><td>${s.questions}</td><td>${s.quizzes}</td><td>${s.avg_pct==null?'-':s.avg_pct+'%'}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">No students registered yet.</td></tr>';
+});
+</script></body></html>

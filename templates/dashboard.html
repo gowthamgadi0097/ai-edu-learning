@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Dashboard</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body>
+<div class="topbar"><span class="brand">AI Learning Assistant</span>
+<span>{{ name }} &nbsp; <a href="{{ url_for('logout') }}">Log out</a></span></div>
+<div class="container">
+<div class="tabs">
+<button class="active" data-tab="chat">AI Chat</button>
+<button data-tab="quiz">Quiz</button>
+<button data-tab="resources">Study resources</button>
+<button data-tab="progress">My progress</button>
+</div>
+
+<section id="chat" class="card">
+<h3>Ask a study question</h3>
+<p class="muted">{% if ai_on %}AI mode is on.{% else %}Offline mode: limited built-in answers. Add an API key on the server for full AI.{% endif %}
+AI answers can be wrong, so verify important facts.</p>
+<div id="log" class="chat-log"></div>
+<div class="row"><input id="msg" placeholder="e.g. Explain binary search" maxlength="1000"><button id="send">Send</button></div>
+</section>
+
+<section id="quiz" class="card hidden">
+<h3>Practice quiz</h3>
+<div class="row"><select id="topic">{% for t in topics %}<option>{{ t }}</option>{% endfor %}</select>
+<button id="gen" style="flex:none">Generate quiz</button></div>
+<div id="quizBox" style="margin-top:16px"></div>
+</section>
+
+<section id="resources" class="card hidden">
+<h3>Recommended resources</h3>
+<p class="muted">Suggested from your quiz results, with the reason shown for each.</p>
+<div id="recList"></div>
+</section>
+
+<section id="progress" class="card hidden">
+<h3>My progress</h3>
+<div id="progBox"></div>
+</section>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>
